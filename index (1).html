@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gastos de Viaje</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff; --bg-sec: #f5f5f4; --bg-ter: #f1efe8;
+      --text: #1a1a18; --text-sec: #5f5e5a; --text-ter: #888780;
+      --border: rgba(0,0,0,0.12); --border-sec: rgba(0,0,0,0.22);
+      --radius: 8px; --radius-lg: 12px;
+      --success: #3b6d11; --danger: #a32d2d; --info: #185fa5;
+      --font: -apple-system, 'Segoe UI', sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1e1e1c; --bg-sec: #2a2a28; --bg-ter: #242422;
+        --text: #e8e6e0; --text-sec: #a8a79f; --text-ter: #6e6d68;
+        --border: rgba(255,255,255,0.12); --border-sec: rgba(255,255,255,0.22);
+        --success: #97c459; --danger: #f09595; --info: #85b7eb;
+      }
+    }
+    body { font-family: var(--font); background: var(--bg-ter); color: var(--text); min-height: 100vh; }
+    .app { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 0.5px solid var(--border); }
+    .header h1 { font-size: 22px; font-weight: 500; }
+    .trip-badge { font-size: 12px; background: #e6f1fb; color: #0c447c; padding: 4px 10px; border-radius: var(--radius); }
+    @media (prefers-color-scheme: dark) { .trip-badge { background: #0c447c; color: #b5d4f4; } }
+    .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; border-bottom: 0.5px solid var(--border); overflow-x: auto; }
+    .tab { padding: 8px 16px; font-size: 14px; cursor: pointer; border: none; background: none; color: var(--text-sec); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; font-family: var(--font); }
+    .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+    .tab:hover { color: var(--text); }
+    .section { display: none; }
+    .section.active { display: block; }
+    .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .card h2 { font-size: 15px; font-weight: 500; margin-bottom: 1rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-full { grid-column: 1 / -1; }
+    @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } .form-full { grid-column: 1; } }
+    label { display: block; font-size: 12px; color: var(--text-sec); margin-bottom: 4px; }
+    input, select { width: 100%; padding: 8px 10px; border: 0.5px solid var(--border-sec); border-radius: var(--radius); font-size: 14px; background: var(--bg); color: var(--text); font-family: var(--font); }
+    input:focus, select:focus { outline: 2px solid var(--info); border-color: transparent; }
+    .btn { padding: 10px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; font-family: var(--font); }
+    .btn-primary { background: var(--text); color: var(--bg); border: none; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-ghost { background: none; border: 0.5px solid var(--border-sec); color: var(--text); }
+    .btn-danger-sm { background: none; border: 0.5px solid var(--danger); color: var(--danger); padding: 4px 10px; border-radius: var(--radius); font-size: 12px; cursor: pointer; font-family: var(--font); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--bg-sec); border-radius: var(--radius); padding: 1rem; }
+    .stat-label { font-size: 12px; color: var(--text-sec); margin-bottom: 6px; }
+    .stat-val { font-size: 22px; font-weight: 500; }
+    .stat-val.sm { font-size: 15px; }
+    .stat-sub { font-size: 11px; color: var(--text-ter); margin-top: 2px; }
+    .expense-list { display: flex; flex-direction: column; gap: 8px; }
+    .expense-item { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+    @media (max-width: 500px) { .expense-item { grid-template-columns: 1fr; } }
+    .exp-date { font-size: 11px; color: var(--text-sec); white-space: nowrap; }
+    .exp-concept { font-size: 14px; font-weight: 500; }
+    .exp-meta { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+    .exp-amounts { text-align: right; }
+    .exp-main { font-size: 15px; font-weight: 500; }
+    .exp-conv { font-size: 11px; color: var(--text-sec); }
+    .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; }
+    .user-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-sec); border: 0.5px solid var(--border); border-radius: 99px; padding: 4px 10px; font-size: 13px; }
+    .avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; }
+    .users-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .split-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+    .split-table th { text-align: left; font-weight: 500; padding: 8px 4px; border-bottom: 0.5px solid var(--border); font-size: 12px; color: var(--text-sec); }
+    .split-table td { padding: 10px 4px; border-bottom: 0.5px solid var(--border); }
+    .bal-pos { color: var(--success); font-weight: 500; }
+    .bal-neg { color: var(--danger); font-weight: 500; }
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text-sec); font-size: 14px; }
+    .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-row select { width: auto; flex: 1; min-width: 120px; }
+    .rates-info { font-size: 11px; color: var(--text-ter); margin-top: 8px; }
+    .conversion-preview { font-size: 13px; color: var(--text-sec); margin-bottom: 12px; min-height: 20px; }
+    .debt-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Gastos de viaje</h1>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="rates-status" style="font-size:11px;color:var(--text-ter)">Cargando tasas...</span>
+      <span class="trip-badge" id="trip-badge">Mi viaje</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="tab('gastos')">Gastos</button>
+    <button class="tab" onclick="tab('agregar')">+ Nuevo gasto</button>
+    <button class="tab" onclick="tab('usuarios')">Usuarios</button>
+    <button class="tab" onclick="tab('division')">División</button>
+    <button class="tab" onclick="tab('config')">Ajustes</button>
+  </div>
+
+  <!-- GASTOS -->
+  <div id="tab-gastos" class="section active">
+    <div class="stats-grid" id="stats"></div>
+    <div class="filter-row">
+      <select id="fu" onchange="renderExp()"><option value="">Todos los usuarios</option></select>
+      <select id="fc" onchange="renderExp()"><option value="">Todas las categorías</option></select>
+    </div>
+    <div class="expense-list" id="exp-list"></div>
+  </div>
+
+  <!-- AGREGAR -->
+  <div id="tab-agregar" class="section">
+    <div class="card">
+      <h2>Registrar gasto</h2>
+      <div class="form-grid">
+        <div><label>Fecha</label><input type="date" id="e-date"></div>
+        <div><label>Quién pagó</label><select id="e-user"><option value="">Seleccionar...</option></select></div>
+        <div class="form-full"><label>Concepto</label><input type="text" id="e-concept" placeholder="ej: Almuerzo en restaurante"></div>
+        <div><label>Monto</label><input type="number" id="e-amount" placeholder="0.00" step="0.01"></div>
+        <div><label>Moneda de pago</label><select id="e-cur">
+          <option value="ARS">ARS - Pesos argentinos</option>
+          <option value="USD">USD - Dólares</option>
+          <option value="BRL">BRL - Reales brasileños</option>
+          <option value="EUR">EUR - Euros</option>
+          <option value="GBP">GBP - Libras esterlinas</option>
+          <option value="CLP">CLP - Pesos chilenos</option>
+          <option value="UYU">UYU - Pesos uruguayos</option>
+          <option value="MXN">MXN - Pesos mexicanos</option>
+          <option value="COP">COP - Pesos colombianos</option>
+          <option value="PEN">PEN - Soles peruanos</option>
+          <option value="BOB">BOB - Bolivianos</option>
+          <option value="PYG">PYG - Guaraníes paraguayos</option>
+          <option value="JPY">JPY - Yenes japoneses</option>
+          <option value="CNY">CNY - Yuanes chinos</option>
+          <option value="THB">THB - Bahts tailandeses</option>
+          <option value="IDR">IDR - Rupias indonesias</option>
+          <option value="INR">INR - Rupias indias</option>
+        </select></div>
+        <div><label>Categoría</label><select id="e-cat">
+          <option value="comida">Comida y bebida</option>
+          <option value="transporte">Transporte</option>
+          <option value="alojamiento">Alojamiento</option>
+          <option value="actividad">Actividades</option>
+          <option value="compras">Compras</option>
+          <option value="salud">Salud</option>
+          <option value="otro">Otro</option>
+        </select></div>
+        <div class="form-full">
+          <label>Dividido entre (vacío = todos)</label>
+          <div id="split-chk" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;"></div>
+        </div>
+        <div class="form-full"><label>Notas (opcional)</label><input type="text" id="e-notes" placeholder="Detalles adicionales"></div>
+      </div>
+      <div style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);">
+        <div class="conversion-preview" id="conv-preview"></div>
+        <button class="btn btn-primary" onclick="addExp()">Guardar gasto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- USUARIOS -->
+  <div id="tab-usuarios" class="section">
+    <div class="card">
+      <h2>Agregar usuario</h2>
+      <div class="form-grid">
+        <div><label>Nombre</label><input type="text" id="u-name" placeholder="ej: María"></div>
+        <div><label>Color</label><select id="u-color">
+          <option value="blue">Azul</option><option value="teal">Verde</option>
+          <option value="coral">Coral</option><option value="purple">Violeta</option>
+          <option value="amber">Naranja</option><option value="pink">Rosa</option>
+        </select></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem;" onclick="addUser()">Agregar usuario</button>
+    </div>
+    <div class="card">
+      <h2>Usuarios del viaje</h2>
+      <div id="u-list"></div>
+    </div>
+  </div>
+
+  <!-- DIVISION -->
+  <div id="tab-division" class="section">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1rem;">
+        <h2 style="margin-bottom:0;">Resumen por persona</h2>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="margin:0;white-space:nowrap;">Ver en:</label>
+          <select id="split-currency" onchange="renderSplit()" style="width:auto;padding:6px 10px;font-size:13px;"></select>
+        </div>
+      </div>
+      <table class="split-table"><thead></thead><tbody id="split-body"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>¿Quién le debe a quién?</h2>
+      <div id="debts"></div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div id="tab-config" class="section">
+    <div class="card">
+      <h2>Ajustes del viaje</h2>
+      <div class="form-grid">
+        <div class="form-full"><label>Nombre del viaje</label><input type="text" id="cfg-name" placeholder="ej: Brasil 2025"></div>
+        <div class="form-full"><label>Moneda local del destino</label><select id="cfg-local">
+          <option value="BRL">BRL - Reales (Brasil)</option>
+          <option value="EUR">EUR - Euros</option>
+          <option value="USD">USD - Dólares</option>
+          <option value="GBP">GBP - Libras</option>
+          <option value="CLP">CLP - Pesos chilenos</option>
+          <option value="UYU">UYU - Pesos uruguayos</option>
+          <option value="MXN">MXN - Pesos mexicanos</option>
+          <option value="COP">COP - Pesos colombianos</option>
+          <option value="JPY">JPY - Yenes</option>
+          <option value="THB">THB - Bahts tailandeses</option>
+        </select></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem;" onclick="saveCfg()">Guardar ajustes</button>
+    </div>
+    <div class="card">
+      <h2>Tasas de cambio</h2>
+      <div id="rates-display" style="font-size:13px;color:var(--text-sec);"></div>
+      <div class="rates-info">Fuente: api.frankfurter.app (base USD) · Se actualizan al abrir la app</div>
+    </div>
+    <div class="card">
+      <h2>Datos</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="exportData()">Exportar JSON</button>
+        <button class="btn btn-ghost" onclick="importData()">Importar JSON</button>
+        <button class="btn" style="background:none;border:0.5px solid var(--danger);color:var(--danger);" onclick="if(confirm('¿Borrar todos los datos del viaje?'))clearAll()">Borrar todo</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+    </div>
+  </div>
+</div>
+
+<script>
+const CAT_COLORS = { comida:'#9FE1CB', transporte:'#B5D4F4', alojamiento:'#CECBF6', actividad:'#FAC775', compras:'#F5C4B3', salud:'#F4C0D1', otro:'#D3D1C7' };
+const CAT_TXT = { comida:'#085041', transporte:'#0C447C', alojamiento:'#3C3489', actividad:'#633806', compras:'#712B13', salud:'#72243E', otro:'#444441' };
+const CAT_LABEL = { comida:'Comida', transporte:'Transporte', alojamiento:'Alojamiento', actividad:'Actividades', compras:'Compras', salud:'Salud', otro:'Otro' };
+const CLR_BG = { blue:'#B5D4F4', teal:'#9FE1CB', coral:'#F5C4B3', purple:'#CECBF6', amber:'#FAC775', pink:'#F4C0D1', gray:'#D3D1C7' };
+const CLR_TX = { blue:'#0C447C', teal:'#085041', coral:'#712B13', purple:'#3C3489', amber:'#633806', pink:'#72243E', gray:'#444441' };
+
+let S = { tripName:'Mi viaje', localCurrency:'BRL', users:[], expenses:[], rates:{} };
+
+function load() { try { const s=localStorage.getItem('tvlExp'); if(s) S=JSON.parse(s); } catch(e){} }
+function save() { localStorage.setItem('tvlExp', JSON.stringify(S)); }
+
+const TABS = ['gastos','agregar','usuarios','division','config'];
+function tab(t) {
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', TABS[i]===t));
+  TABS.forEach(id => document.getElementById('tab-'+id).classList.toggle('active', id===t));
+  if(t==='gastos') renderAll();
+  if(t==='agregar') setupForm();
+  if(t==='usuarios') renderUsers();
+  if(t==='division') renderSplit();
+  if(t==='config') { document.getElementById('cfg-name').value=S.tripName; document.getElementById('cfg-local').value=S.localCurrency; renderRates(); }
+}
+
+async function fetchRates() {
+  try {
+    const r = await fetch('https://api.frankfurter.app/latest?from=USD');
+    const d = await r.json();
+    S.rates = {...d.rates, USD:1};
+    document.getElementById('rates-status').textContent = 'Tasas actualizadas ✓';
+    save(); renderRates(); renderAll();
+  } catch(e) {
+    document.getElementById('rates-status').textContent = 'Sin conexión';
+  }
+}
+
+function toUSD(amount, cur) {
+  if(cur==='USD') return amount;
+  return S.rates[cur] ? amount / S.rates[cur] : null;
+}
+function fromUSD(usd, cur) {
+  if(cur==='USD') return usd;
+  return S.rates[cur] ? usd * S.rates[cur] : null;
+}
+function fmt(val, cur) {
+  if(val===null||val===undefined||isNaN(val)) return 'N/D';
+  return new Intl.NumberFormat('es-AR',{style:'currency',currency:cur,maximumFractionDigits:2}).format(val);
+}
+
+function renderAll() {
+  document.getElementById('trip-badge').textContent = S.tripName;
+  renderStats(); renderExp(); renderFilters();
+}
+
+function renderStats() {
+  const tot = S.expenses.reduce((s,e) => s+(toUSD(e.amount,e.currency)||0),0);
+  const ars = fromUSD(tot,'ARS'), loc = fromUSD(tot,S.localCurrency);
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total USD</div><div class="stat-val">${fmt(tot,'USD')}</div><div class="stat-sub">${S.expenses.length} gasto${S.expenses.length!==1?'s':''}</div></div>
+    <div class="stat-card"><div class="stat-label">Total ARS</div><div class="stat-val sm">${fmt(ars,'ARS')}</div></div>
+    <div class="stat-card"><div class="stat-label">Total ${S.localCurrency}</div><div class="stat-val sm">${fmt(loc,S.localCurrency)}</div></div>
+    <div class="stat-card"><div class="stat-label">Viajeros</div><div class="stat-val">${S.users.length}</div><div class="stat-sub">personas</div></div>`;
+}
+
+function renderFilters() {
+  const fu=document.getElementById('fu'), fc=document.getElementById('fc');
+  const pu=fu.value, pc=fc.value;
+  fu.innerHTML='<option value="">Todos los usuarios</option>'+S.users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  fc.innerHTML='<option value="">Todas las categorías</option>'+Object.entries(CAT_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  fu.value=pu; fc.value=pc;
+}
+
+function renderExp() {
+  const fu=document.getElementById('fu').value, fc=document.getElementById('fc').value;
+  let exps=[...S.expenses].reverse();
+  if(fu) exps=exps.filter(e=>e.userId===fu);
+  if(fc) exps=exps.filter(e=>e.category===fc);
+  const el=document.getElementById('exp-list');
+  if(!exps.length){el.innerHTML='<div class="empty">Sin gastos registrados aún.<br>¡Agrega tu primer gasto!</div>';return;}
+  const u=id=>S.users.find(x=>x.id===id);
+  el.innerHTML=exps.map(e=>{
+    const usdA=toUSD(e.amount,e.currency), arsA=fromUSD(usdA,'ARS'), locA=fromUSD(usdA,S.localCurrency);
+    const usr=u(e.userId), cat=CAT_COLORS[e.category]||'#D3D1C7', catT=CAT_TXT[e.category]||'#444441';
+    const splitNames=(e.splitWith&&e.splitWith.length?e.splitWith.map(id=>{const su=u(id);return su?su.name:'?'}):['Todos']).join(', ');
+    const dateStr=e.date?e.date.split('-').slice(1).reverse().join('/'):'';
+    return `<div class="expense-item">
+      <div style="text-align:center;min-width:60px;">
+        <div class="exp-date">${dateStr}</div>
+        <div style="margin-top:4px;"><span class="pill" style="background:${cat};color:${catT}">${CAT_LABEL[e.category]||e.category}</span></div>
+      </div>
+      <div>
+        <div class="exp-concept">${e.concept}</div>
+        <div class="exp-meta">${usr?`<span style="width:8px;height:8px;border-radius:50%;background:${CLR_BG[usr.color]};display:inline-block;margin-right:4px;"></span>${usr.name} · `:''}${e.notes?e.notes+' · ':''}Dividido: ${splitNames}</div>
+      </div>
+      <div class="exp-amounts">
+        <div class="exp-main">${fmt(e.amount,e.currency)}</div>
+        ${e.currency!=='USD'?`<div class="exp-conv">${fmt(usdA,'USD')}</div>`:''}
+        ${e.currency!=='ARS'?`<div class="exp-conv">${fmt(arsA,'ARS')}</div>`:''}
+        ${S.localCurrency!==e.currency&&S.localCurrency!=='USD'&&S.localCurrency!=='ARS'?`<div class="exp-conv">${fmt(locA,S.localCurrency)}</div>`:''}
+        <div style="margin-top:4px;"><button class="btn-danger-sm" onclick="delExp('${e.id}')">Eliminar</button></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function delExp(id) { S.expenses=S.expenses.filter(e=>e.id!==id); save(); renderExp(); renderStats(); }
+
+function setupForm() {
+  const sel=document.getElementById('e-user');
+  sel.innerHTML='<option value="">Seleccionar...</option>'+S.users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  const chk=document.getElementById('split-chk');
+  chk.innerHTML=S.users.length?S.users.map(u=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" value="${u.id}" name="su"> ${u.name}</label>`).join('') :'<span style="font-size:13px;color:var(--text-sec)">Agrega usuarios primero</span>';
+  document.getElementById('e-date').value=new Date().toISOString().split('T')[0];
+  const amt=document.getElementById('e-amount'), cur=document.getElementById('e-cur');
+  function updatePrev(){
+    const v=parseFloat(amt.value), c=cur.value;
+    if(!v||isNaN(v)){document.getElementById('conv-preview').textContent='';return;}
+    const usd=toUSD(v,c), ars=fromUSD(usd,'ARS'), loc=fromUSD(usd,S.localCurrency);
+    const parts=[];
+    if(c!=='USD') parts.push(fmt(usd,'USD'));
+    if(c!=='ARS') parts.push(fmt(ars,'ARS'));
+    if(S.localCurrency!==c&&S.localCurrency!=='USD'&&S.localCurrency!=='ARS') parts.push(fmt(loc,S.localCurrency));
+    document.getElementById('conv-preview').textContent=parts.length?'Equivale a: '+parts.join(' · '):'';
+  }
+  amt.removeEventListener('input',updatePrev); cur.removeEventListener('change',updatePrev);
+  amt.addEventListener('input',updatePrev); cur.addEventListener('change',updatePrev);
+}
+
+function addExp() {
+  const concept=document.getElementById('e-concept').value.trim();
+  const amount=parseFloat(document.getElementById('e-amount').value);
+  const currency=document.getElementById('e-cur').value;
+  const userId=document.getElementById('e-user').value;
+  const date=document.getElementById('e-date').value;
+  const category=document.getElementById('e-cat').value;
+  const notes=document.getElementById('e-notes').value.trim();
+  const checked=[...document.querySelectorAll('input[name="su"]:checked')].map(c=>c.value);
+  if(!concept||!amount||!userId||!date){alert('Completa concepto, monto, quién pagó y fecha.');return;}
+  S.expenses.push({id:Date.now().toString(),concept,amount,currency,userId,date,category,notes,splitWith:checked});
+  save();
+  ['e-concept','e-amount','e-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('conv-preview').textContent='';
+  document.querySelectorAll('input[name="su"]').forEach(c=>c.checked=false);
+  tab('gastos');
+}
+
+function renderUsers() {
+  const el=document.getElementById('u-list');
+  if(!S.users.length){el.innerHTML='<div style="font-size:13px;color:var(--text-sec)">Agrega el primer viajero.</div>';return;}
+  el.innerHTML='<div class="users-row">'+S.users.map(u=>`
+    <div class="user-chip">
+      <div class="avatar" style="background:${CLR_BG[u.color]};color:${CLR_TX[u.color]}">${u.name.slice(0,2).toUpperCase()}</div>
+      ${u.name}
+      <button style="background:none;border:none;cursor:pointer;color:var(--text-ter);font-size:16px;" onclick="delUser('${u.id}')">×</button>
+    </div>`).join('')+'</div>';
+}
+
+function addUser() {
+  const name=document.getElementById('u-name').value.trim(), color=document.getElementById('u-color').value;
+  if(!name){alert('Ingresa un nombre.');return;}
+  if(S.users.find(u=>u.name.toLowerCase()===name.toLowerCase())){alert('Ya existe un usuario con ese nombre.');return;}
+  S.users.push({id:Date.now().toString(),name,color});
+  document.getElementById('u-name').value='';
+  save(); renderUsers();
+}
+
+function delUser(id) {
+  if(S.expenses.some(e=>e.userId===id)){if(!confirm('Este usuario tiene gastos registrados. ¿Eliminar igual?'))return;}
+  S.users=S.users.filter(u=>u.id!==id); save(); renderUsers();
+}
+
+function getUsedCurrencies() {
+  const used = new Set(S.expenses.map(e => e.currency));
+  // Always include USD, ARS and local currency
+  used.add('USD'); used.add('ARS'); used.add(S.localCurrency);
+  return [...used].filter(c => c && S.rates[c]);
+}
+
+function populateSplitCurrencySelector() {
+  const sel = document.getElementById('split-currency');
+  const prev = sel.value;
+  const currencies = getUsedCurrencies();
+  const CUR_NAMES = {ARS:'Pesos (ARS)',USD:'Dólares (USD)',BRL:'Reales (BRL)',EUR:'Euros (EUR)',GBP:'Libras (GBP)',CLP:'Pesos CHL',UYU:'Pesos URY',MXN:'Pesos MX',COP:'Pesos COL',PEN:'Soles (PEN)',JPY:'Yenes (JPY)',THB:'Bahts (THB)',CNY:'Yuanes (CNY)',BOB:'Bolivianos',PYG:'Guaraníes',IDR:'Rupias (IDR)',INR:'Rupias (INR)'};
+  sel.innerHTML = currencies.map(c => `<option value="${c}">${CUR_NAMES[c]||c}</option>`).join('');
+  if(currencies.includes(prev)) sel.value = prev;
+  else sel.value = currencies.includes('USD') ? 'USD' : currencies[0];
+}
+
+function renderSplit() {
+  populateSplitCurrencySelector();
+  const displayCur = document.getElementById('split-currency').value || 'USD';
+
+  // Calculate everything in USD internally
+  const totals={};
+  S.users.forEach(u=>{totals[u.id]={paidUSD:0,owedUSD:0,name:u.name,color:u.color};});
+  S.expenses.forEach(e=>{
+    const usd=toUSD(e.amount,e.currency)||0;
+    if(totals[e.userId]) totals[e.userId].paidUSD+=usd;
+    const split=e.splitWith&&e.splitWith.length?e.splitWith:S.users.map(u=>u.id);
+    const share=split.length?usd/split.length:0;
+    split.forEach(uid=>{if(totals[uid]) totals[uid].owedUSD+=share;});
+  });
+
+  // Convert to display currency
+  const body=document.getElementById('split-body');
+  const thead=body.previousElementSibling;
+  thead.innerHTML=`<tr><th>Usuario</th><th>Pagó (${displayCur})</th><th>Le corresponde (${displayCur})</th><th>Balance</th></tr>`;
+  body.innerHTML=Object.values(totals).map(u=>{
+    const paid=fromUSD(u.paidUSD,displayCur), owed=fromUSD(u.owedUSD,displayCur);
+    const bal=(paid||0)-(owed||0);
+    return `<tr>
+      <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:${CLR_BG[u.color]};display:inline-block;"></span>${u.name}</span></td>
+      <td>${fmt(paid,displayCur)}</td>
+      <td>${fmt(owed,displayCur)}</td>
+      <td class="${bal>=0?'bal-pos':'bal-neg'}">${bal>=0?'+':''}${fmt(bal,displayCur)}</td></tr>`;
+  }).join('');
+
+  // Debts always calculated in USD, displayed in selected currency
+  const bals=Object.entries(totals).map(([id,u])=>({id,name:u.name,balance:u.paidUSD-u.owedUSD}));
+  const debts=calcDebts(bals);
+  const el=document.getElementById('debts');
+  if(!debts.length){el.innerHTML='<div style="font-size:13px;color:var(--text-sec);padding:8px 0;">¡Sin deudas pendientes! Todos están al día.</div>';return;}
+  el.innerHTML=debts.map(d=>{
+    const dispAmt=fromUSD(d.amount,displayCur);
+    return `<div class="debt-row"><span><strong>${d.from}</strong> le debe a <strong>${d.to}</strong></span><span style="color:var(--danger);font-weight:500;">${fmt(dispAmt,displayCur)}</span></div>`;
+  }).join('');
+}
+
+function calcDebts(bals) {
+  const pos=[...bals.filter(b=>b.balance>0.01)].sort((a,b)=>b.balance-a.balance);
+  const neg=[...bals.filter(b=>b.balance<-0.01)].sort((a,b)=>a.balance-b.balance);
+  const debts=[]; let pi=0,ni=0;
+  while(pi<pos.length&&ni<neg.length){
+    const p=pos[pi],n=neg[ni],amt=Math.min(p.balance,-n.balance);
+    debts.push({from:n.name,to:p.name,amount:amt});
+    p.balance-=amt; n.balance+=amt;
+    if(p.balance<0.01)pi++; if(n.balance>-0.01)ni++;
+  }
+  return debts;
+}
+
+function renderRates() {
+  const keys=['ARS','USD','BRL','EUR','GBP','CLP','UYU','MXN','COP','JPY','THB','CNY'];
+  const names={ARS:'Peso arg.',USD:'Dólar',BRL:'Real',EUR:'Euro',GBP:'Libra',CLP:'Peso CHL',UYU:'Peso URY',MXN:'Peso MX',COP:'Peso COL',JPY:'Yen',THB:'Baht',CNY:'Yuan'};
+  const el=document.getElementById('rates-display');
+  if(!Object.keys(S.rates).length){el.textContent='Tasas no disponibles (sin conexión)';return;}
+  el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">'+
+    keys.filter(k=>S.rates[k]).map(k=>`<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;">
+      <strong>${k}</strong> <span style="color:var(--text-sec)">${names[k]||k}</span><br>
+      1 USD = ${parseFloat(S.rates[k]).toFixed(2)}</div>`).join('')+'</div>';
+}
+
+function saveCfg() {
+  S.tripName=document.getElementById('cfg-name').value.trim()||'Mi viaje';
+  S.localCurrency=document.getElementById('cfg-local').value;
+  document.getElementById('trip-badge').textContent=S.tripName;
+  save(); alert('Ajustes guardados correctamente.');
+}
+
+function exportData() {
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='gastos-viaje.json'; a.click();
+}
+function importData() { document.getElementById('import-file').click(); }
+function handleImport(e) {
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{S=JSON.parse(ev.target.result);save();renderAll();alert('Datos importados correctamente.');}catch(err){alert('Archivo JSON inválido.');}};
+  r.readAsText(file);
+}
+function clearAll() { S={tripName:'Mi viaje',localCurrency:'BRL',users:[],expenses:[],rates:{}}; localStorage.removeItem('tvlExp'); location.reload(); }
+
+load();
+document.getElementById('cfg-name').value=S.tripName;
+document.getElementById('cfg-local').value=S.localCurrency;
+fetchRates();
+renderAll();
+</script>
+</body>
+</html>
